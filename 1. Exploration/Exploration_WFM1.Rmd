@@ -2,7 +2,7 @@
 title: "Exploration_WFM1"
 author: "Milton Osiel Candela Leal"
 date: "7/17/2021"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
