@@ -1,4 +1,3 @@
-# ALAS-ML
 ## Overview
 The Advance Learner Assistance System (ALAS) architecture is composed by a set of modules, the current GitHub repository contains scipts used by the Machine Learning module. The repository in question is organized as a set of milestones that led to the final model, which predicted a 3-level mental fatigue with a 92.25% accuracy using EEG features.
 
