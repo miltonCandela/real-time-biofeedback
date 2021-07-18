@@ -2,7 +2,7 @@
 title: "FeatureSelection_LDA_MARS"
 author: "Milton Osiel Candela Leal"
 date: "7/17/2021"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
@@ -25,119 +25,136 @@ library(MASS)
 library(earth)
 ```
 
+## Getting the Data Frame
+Similar to the previous milestone, the *WFM.1* document is extracted from the .mat document, change the columns' names and filter the dataset making sure all values on the Data Frame are less than 20 (due to the fact that the data is already standardized by its mean, it is really strange to have values superior to 20). The features from the Empatica E4 wristband are further eliminated, although there is class imbalance problem among the predicted classes.
+
 ```{r }
-getDf <- function(){
-     data <- readMat('FeatureMatrices.mat')
-     unmin <- as.data.frame(data$WFM.1)
+data <- readMat('Data/Raw/FeatureMatrices.mat')
+unmin <- as.data.frame(data$WFM.1)
      
-     feature_names <- unlist(data$FMinfo)
-     feature_names <- gsub(' \\(', '_', feature_names)
-     feature_names <- gsub(')', '', feature_names)
-     feature_names <- gsub('`', '', feature_names)
-     feature_names <- gsub('\\/', '-', feature_names)
+feature_names <- unlist(data$FMinfo)
+feature_names <- gsub(' \\(', '_', feature_names)
+feature_names <- gsub(')', '', feature_names)
+feature_names <- gsub('`', '', feature_names)
+feature_names <- gsub('\\/', '-', feature_names)
      
-     colnames(unmin) <- feature_names
+colnames(unmin) <- feature_names
      
-     df <- filter_all(unmin, all_vars(. < 20))
-     df <- mutate(df, Clas = as.factor(Clas))
+df <- filter_all(unmin, all_vars(. < 20))
+df <- mutate(df, Clas = as.factor(Clas))
      
-     EDA_index <- 121:129
-     div_index <- 41:120
+EDA_index <- 121:129
+div_index <- 41:120
      
-     df <- df[,-EDA_index]
-     
-     set.seed(2031)
-     df <- upSample(df[,-length(df)], df$Clas, yname = 'Clas')
-     
-     return(df)
-}
+df <- df[,-EDA_index]
 
-df <- getDf()
+print(summary(df$Clas))
+```
 
+This imbalance of classes was solved via an up-sampling technique given by the caret package, and so all the classes have the same number of samples. 
+```{r }
+set.seed(2031)
+df <- upSample(df[,-length(df)], df$Clas, yname = 'Clas')
+print(summary(df$Clas))
+```
+
+## Feature selection using RFE and MARS
+
+An hybrid feature selection technique was used in order to reduce the number of features used, as the previous generated models used all of the features available.
+
+The first feature selection method us called Recursive Feature Elimination (RFE), using Linear Discriminant Analysis (LDA) to reduce the number of features to a desired value (in this case, the number 44 was employed). This provived the top 44 features according to the method used, then, the data was fitted into a Multivariate Regression Spinelines (MARS) model to capture non-linearity between features, which further reduced the number of features to 10.
+
+```{r }
 ldaProf <- function(df, sizes = 1:50) {
      set.seed(1002)
      
-     inTrain <- createDataPartition(df$Clas, p = .75, list = FALSE)[,1]
+     inTrain <- createDataPartition(df$Clas, p = 0.70, list = FALSE)[,1]
      
-     train <- df[ inTrain, -length(df)] # Sólo variables continuas
-     trainClass <- df$Clas[inTrain] # Variable categórica
+     train <- df[inTrain, -length(df)]
+     trainClass <- df$Clas[inTrain]
      
      set.seed(302)
-     
-     ## Realiza un perfil de importancia respecto a LDA
-     ldaProfile <- rfe(train, trainClass, sizes = sizes,
+     ldaProfile <- rfe(train, trainClass, sizes = sizes, 
                        rfeControl = rfeControl(functions = ldaFuncs, method = 'cv'))
-     ldaProfile
+     return(ldaProfile)
 }
 
 dfTopN <- function(df, n = 44){
-     topn <- head(ldaProf(df)$variables$var, n) # Las mejores 44 variables (daba 0.9)
+     topn <- head(ldaProf(df)$variables$var, n)
+     df <- df[,c(topn, 'Clas')]
      
-     df <- df[,c(topn, 'Clas')] # Subset con estas mejores variables
-     
-     ## Multivariate Adaptive Regression Splines para importancia de features
      marsModel <- earth(Clas ~ ., data = df, pmethod = 'cv', nfold = 5)
-     ev <- evimp(marsModel) # Estima la importancia de cada variable
+     ev <- evimp(marsModel)
      
-     nombresMARS <- gsub("`", "", rownames(ev)) # Nombres de las columnas
-     
-     df <- df[,c(nombresMARS, 'Clas')] # Subset con las columnas MARS
+     nombresMARS <- gsub("`", "", rownames(ev))
+     df <- df[,c(nombresMARS, 'Clas')]
      
      return(df)
 }
 
-df <- dfTopN(df, n = 44) # Función declarada anteriormente para obtener top 10 variables
+df <- dfTopN(df, n = 44)
+```
+With this filtered Data Frame, the top features are the following (excluding *Clas*): 
+```{r }
+print(colnames(df))
+```
 
-## Generalized Testing using gbm & rf
+## Generalized testing using gbm, rf, lda
+In order to test this features' performance, a generalized testing function was created, which separates the Data Frame into training and testing dataset, fits an algorithm, averages the accuracy score using a confusion matrix and incremental cross-validations from 1 to 5. Then, a for loop incremented the number of features from 2 to 10, in order to appreciate the correct number of features required by the algorithms used.
 
+```{r }
 geneTesting <- function(df){ 
      set.seed(1002)
      
-     trainIndex <- createDataPartition(df$Clas, p = 0.70, list = FALSE) # Divide los datos
-     training <- df[trainIndex,] # Data del training
-     testing <- df[-trainIndex,] # Data del testing
+     trainIndex <- createDataPartition(df$Clas, p = 0.70, list = FALSE)
+     training <- df[trainIndex,]
+     testing <- df[-trainIndex,]
      
      prob_modelo <- function(training, met, testing, control){
           
           if(met == 'gbm'){
                modelo <- train(Clas ~ ., data = training, method = met, trControl = control, 
-                               verbose = FALSE) # verbose = FALSE cuando se usa gbm
-          } else{
+                               verbose = FALSE) 
+          } else if (met == 'rf'){
                modelo <- train(Clas ~ ., data = training, method = met, trControl = control,
-                               tuneLength = length(train)) # tuneLength = ncols(train) cuando rf
+                               tuneLength = length(train))
+          } else {
+               modelo <- train(Clas ~ ., data = training, method = met, trControl = control)
           }
           
-          Pred <- predict(modelo, testing) # Se predicen los valores con base en testing
-          
-          acc <- round(confusionMatrix(testing$Clas, Pred)$overall[1], 5) # Accuracy de resultados
+          Pred <- predict(modelo, testing)
+          acc <- round(confusionMatrix(testing$Clas, Pred)$overall[1], 5)
           return(acc)
      }
      
-     n <- 5 # Número máximo de folds en crossvalidations
-     metodos <- c('rf', 'gbm') # Los dos métodos usados
-     df_modelos <- data.frame(rf = NA, gbm = NA) # df inicial de ambos métodos
+     n <- 5
+     metodos <- c('rf', 'gbm', 'lda')
+     df_modelos <- data.frame(rf = NA, gbm = NA, lda = NA)
      for(metodo in metodos){
-          accs <- c() # Vector vacio donde se depositarán las accuracies
+          accs <- c()
           for(num in 2:n){
-               control <- trainControl(method = 'cv', number = num) # Número de folds en crossvalidation
-               acc <- prob_modelo(training, metodo, testing, control) # Función de arriba para acc
-               accs <- c(accs, acc) # Accs del mismo método, diferentes folds de crossvalidation
+               control <- trainControl(method = 'cv', number = num)
+               acc <- prob_modelo(training, metodo, testing, control)
+               accs <- c(accs, acc) 
           }
-          df_modelos[,metodo] <- mean(accs) # Append al dataframe de promedio(accs) dependiendo del método 
+          df_modelos[,metodo] <- mean(accs) 
      }
      return(df_modelos)
 }
 
 
-n <- length(df) - 1 # Cantidad de features máximas encontradas en el df
-dfEval <- data.frame(n_vars = 2:n, rf = NA, gbm = NA) # Declaración de df vacio, donde estarán las accs
+n <- length(df) - 1
+dfEval <- data.frame(n_vars = 2:n, rf = NA, gbm = NA, lda = NA)
 
 for(i in 2:n){
-     dfEval[dfEval$n_vars == i,c('rf', 'gbm')] <- geneTesting(df[,c(1:i, length(df))]) # Append de accs
-     #print(paste(round(((i - 1)/(length(2:n))), 2) * 100, '%', sep = '')) # Para medir cuanto le falta a la maquina
+     dfEval[dfEval$n_vars == i,c('rf', 'gbm', 'lda')] <- geneTesting(df[,c(1:i, length(df))])
 }
-dfEval # df de accuracies que existen en 
 
-colnames(df) # Top 10 columnas con base en los métodos utilizados
+plot(dfEval$rf ~ dfEval$n_vars, col = 1, lwd = 2, type = 'l', xlab = 'Number of features used', ylab = 'Accuracy',
+     main = 'Accuracy of models with respect to variables used', ylim = c(0.5, 1), xlim = c(2,n))
+lines(dfEval$gbm ~ dfEval$n_vars, col = 2, lwd = 2)
+lines(dfEval$lda ~ dfEval$n_vars, col = 3, lwd = 2)
+legend('bottomright', legend = c('rf', 'gbm', 'lda'), col = 1:3, lty = 1, lwd = 2)
 ```
 
+As it can be seen, with default parameters, Random Forest (rf) outperforms Gradient Boosting Method (gbm) and Linear discriminant analysis (lda) on a small set of features. However, as the number of features increased, the performance of gbm is compared to rf, while lda's performance is somewhat lower than the performance of the aforementioned algorithms.  
