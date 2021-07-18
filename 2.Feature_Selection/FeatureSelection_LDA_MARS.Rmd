@@ -2,7 +2,7 @@
 title: "FeatureSelection_LDA_MARS"
 author: "Milton Osiel Candela Leal"
 date: "7/17/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -68,7 +68,7 @@ The first feature selection method us called Recursive Feature Elimination (RFE)
 ldaProf <- function(df, sizes = 1:50) {
      set.seed(1002)
      
-     inTrain <- createDataPartition(df$Clas, p = 0.70, list = FALSE)[,1]
+     inTrain <- createDataPartition(df$Clas, p = 0.75, list = FALSE)[,1]
      
      train <- df[inTrain, -length(df)]
      trainClass <- df$Clas[inTrain]
