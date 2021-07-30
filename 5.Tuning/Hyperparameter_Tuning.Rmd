@@ -1,0 +1,77 @@
+---
+title: "Hyper-parameter_Tuning"
+author: "Milton Candela"
+date: "7/29/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(R.matlab)
+library(dplyr)
+library(caret)
+library(randomForest)
+library(RColorBrewer)
+library(lattice)
+```
+
+## Packages used
+The following packages were used:
+
+```{r setup, eval = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(R.matlab)
+library(dplyr)
+library(caret)
+library(randomForest)
+library(RColorBrewer)
+library(lattice)
+```
+
+## Loading data and training model
+Three new, processed CSV files were created using *createCSV.R*:
+- RF_MARS_None.csv
+- RF_MARS_Down.csv
+- RF_MARS_Up.csv
+
+Each file already has a sampling technique applied to reduce the class imbalance, given by the third word on the name of the file (*None*, *Down*, *Up*). The dataset is based on the document that contains data from 4 minutes (*WFM.4*), and combines both *FeatureMatrices.mat* and *FeatureMatrices_pre.mat*. It only has 11 columns (10 features and a Class column), although, a different feature selection technique was used in order to obtain the best features.
+
+The LDA feature selection technique was removed, and instead, the RF's GINI Importance was used, filtering the number of features to 20. That is the only modification on the previous pipeline, the MARS model is still being used as a second feature selection technique using these 20 features to obtain the best 10 features. The previous change was done because the RF algorithm showed promising results, and thus a technique that was more related to it, could improve its performance. Due to the RF algorithm having a factor of randomness, 20 different seeds were used to compute the best features using the hybrid feature selection method, afterwards, the frequency of each feature was computed to obtain the most predominant features.
+
+The same 70:30 split is being applied, with the same seed to obtain consistent results. We now use **RandomForest** package to tune its parameters more precisely and thus get a more efficient algorithm according to our data and objective. The hyper-parameters used were selected due a grid search performed in the script *gridSearch.R*, the script outputs a CSV file with the grid values and the models accuracy on training and testing dataset. The best ratio between testing and training accuracy was chosen, and so its parameters are being applied on the final model that is being fitted.
+
+```{r mod}
+df <- read.csv('Data/Processed/RF_MARS_Up.csv')
+df <- mutate(df, Clas = as.factor(Clas))
+
+set.seed(1002)
+trainIndex <- createDataPartition(df$Clas, p = 0.7, list = FALSE)
+training <- df[trainIndex,]
+testing <- df[-trainIndex,]
+
+model <- randomForest(Clas ~ ., training)
+```
+
+## Model's confusion matrix
+In order to validate the model's performance, a confusion matrix would be created using the **lattice** package. The values are manually normalized and so 1 represents perfect accuracy, while 0 represents poor prediction power. The current dataset is balanced, and so the mean confusion matrix's accuracy can be used as a reliable matrix, that is free from bias.
+
+```{r con}
+Pred <- predict(model, testing)
+round(confusionMatrix(data$Clas, Pred)$overall[1], 5)
+confm <- confusionMatrix(reference = testing$Clas, data = Pred)$table
+
+sum_row <- apply(t(confm), FUN = sum, MARGIN = 1)
+conf_centage <- sweep(confm, MARGIN = 2, sum_row, FUN = '/')
+row.names(conf_centage) <- c('No Fatigue', 'Moderate\nFatigue', 'Extreme\nFatigue')
+colnames(conf_centage) <- c('No Fatigue', 'Moderate\nFatigue', 'Extreme\nFatigue')
+conf_centage <- round(conf_centage, 2)
+color <- brewer.pal(n = 9, name = 'Greys')
+
+levelplot(conf_centage, col.regions = color,
+          xlab = 'Prediction', ylab = 'Reference', colorkey = FALSE,
+          main = "Final model's confusion matrix on testing dataset",
+          panel = function(x, y, z, ...) {
+               panel.levelplot(x, y, z, ...)
+               panel.text(x, y, conf_centage[cbind(x,y)])
+          })
+```
