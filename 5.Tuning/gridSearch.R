@@ -26,8 +26,9 @@ hyper_grid <- expand.grid(
      accTe = 0
 )
 
+hyper_grid <- read.csv('5.Tuning/rfGrid.csv')
 N <- nrow(hyper_grid)
-for(i in 1:N){
+for(i in 16150:N){
      set.seed(200)
      model <- randomForest(Clas ~ ., data = training, ntree = hyper_grid$ntree[i],
                            type = 'classification', nodesize = hyper_grid$nodesize[i],
@@ -43,6 +44,7 @@ for(i in 1:N){
      hyper_grid$accTe[i] <- accTe
      
      if(i %in% seq(N/100, N, N/100)){
-          print(paste(i/N*(N/100), '%'))
+          print(paste((i/N)*(100), '%'))
      }
 }
+write.csv(hyper_grid, '5.Tuning/rfGrid.csv', row.names = FALSE)
