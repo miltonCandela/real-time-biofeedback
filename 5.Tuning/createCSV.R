@@ -57,46 +57,47 @@ perfDocs <- function(doc, lim, columns = NULL, sampling = 'none'){
      return(df)
 }
 
-df <- perfDocs(doc = 'WFM.4',lim =  10)
-
-features <- c()
-for(seed in 1:20){
-     set.seed(seed)
-     
-     datos_exp <- df
-     colnames(datos_exp) <- sapply(1:length(datos_exp), FUN = function(x){paste('V', x, sep = '')})
-     colnames(datos_exp)[length(datos_exp)] <- 'Clas'
-     rf <- randomForest(Clas ~ ., data = datos_exp)
-     feat_import <- importance(rf)
-     varImpPlot(rf)
-     featImportOrd <- feat_import[order(feat_import, decreasing = TRUE),]
-     top10 <- head(featImportOrd, 20)
-     top10 <- t(t(top10))
-     topFeat <- as.numeric(gsub('V', '', rownames(top10)))
-     df2 <- df[,c(topFeat, length(df))]
-     
-     marsModel <- earth(Clas ~ ., data = df2)
-     ev <- evimp(marsModel)
-     nombresMARS <- gsub("`", "",rownames(ev))
-     dfMARS <- df[,c(nombresMARS, 'Clas')]
-     features <- c(features, colnames(dfMARS))
-}
-
-df_results <- data.frame(feature = unique(unlist(features)), freq = NA)
-for(feature in df_results$feature){
-     df_results[df_results$feature == feature,'freq'] <- sum(feature == features)
-     if(feature == 'Clas'){
-          df_results[df_results$feature == feature,'freq'] <- 0
-     }
-}
-df_results <- df_results[order(df_results$freq, decreasing = TRUE),]
-rownames(df_results) <- NULL
-best_features <- c(df_results$feature[1:10], 'Clas')
-
 sampling <- c('None', 'Up', 'Down')
 for(samp in sampling){
-     df <- perfDocs(doc = 'WFM.4', lim = 10, columns = best_features, sampling = samp)
-     print(samp)
-     print(summary(df$Clas))
-     write.csv(df, paste0('Data/Processed/RF_MARS_', samp, '.csv'), row.names = FALSE)
+        df <- perfDocs(doc = 'WFM.4',lim =  10, sampling = samp)
+        
+        writeLines(paste('Current sampling:',samp))
+        features <- c()
+        n <- 20
+        for(seed in 1:n){
+             set.seed(seed)
+             
+             datos_exp <- df
+             colnames(datos_exp) <- sapply(1:length(datos_exp), FUN = function(x){paste('V', x, sep = '')})
+             colnames(datos_exp)[length(datos_exp)] <- 'Clas'
+             rf <- randomForest(Clas ~ ., data = datos_exp)
+             feat_import <- importance(rf)
+             featImportOrd <- feat_import[order(feat_import, decreasing = TRUE),]
+             top10 <- head(featImportOrd, 20)
+             top10 <- t(t(top10))
+             topFeat <- as.numeric(gsub('V', '', rownames(top10)))
+             df2 <- df[,c(topFeat, length(df))]
+             
+             marsModel <- earth(Clas ~ ., data = df2)
+             ev <- evimp(marsModel)
+             nombresMARS <- gsub("`", "",rownames(ev))
+             dfMARS <- df[,c(nombresMARS, 'Clas')]
+             features <- c(features, colnames(dfMARS))
+             writeLines(paste(seed/n * 100, '%'))
+        }
+        
+        df_results <- data.frame(feature = unique(unlist(features)), freq = NA)
+        for(feature in df_results$feature){
+             df_results[df_results$feature == feature,'freq'] <- sum(feature == features)
+             if(feature == 'Clas'){
+                  df_results[df_results$feature == feature,'freq'] <- 0
+             }
+        }
+        df_results <- df_results[order(df_results$freq, decreasing = TRUE),]
+        rownames(df_results) <- NULL
+        best_features <- c(df_results$feature[1:10], 'Clas')
+        
+        df <- perfDocs(doc = 'WFM.4', lim = 10, columns = best_features, sampling = samp)
+        print(summary(df$Clas))
+        write.csv(df, paste0('Data/Processed/RF_MARS_', samp, '.csv'), row.names = FALSE)
 }
