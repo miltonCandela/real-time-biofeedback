@@ -28,7 +28,8 @@ hyper_grid <- expand.grid(
 
 hyper_grid <- read.csv('5.Tuning/rfGrid.csv')
 N <- nrow(hyper_grid)
-for(i in 16150:N){
+checkpoint = row.names(hyper_grid[hyper_grid$accTa == 0,])[1]
+for(i in checkpoint:N){
      set.seed(200)
      model <- randomForest(Clas ~ ., data = training, ntree = hyper_grid$ntree[i],
                            type = 'classification', nodesize = hyper_grid$nodesize[i],
@@ -48,3 +49,12 @@ for(i in 16150:N){
      }
 }
 write.csv(hyper_grid, '5.Tuning/rfGrid.csv', row.names = FALSE)
+
+# plot
+hyper_grid <- hyper_grid[hyper_grid$accTa != 0,]
+hyper_order <- hyper_grid[order(hyper_grid$accTa),]
+hyper_order[,'accProm'] <- hyper_order$accTe / hyper_order$accTa
+
+plot(hyper_order$accTa, col = 'red', ylab = 'Accuracy')
+points(hyper_order$accTe, col = 'blue')
+points(hyper_order$accProm, col = 'green')
