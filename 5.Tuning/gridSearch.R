@@ -1,9 +1,10 @@
 # The following script creates a hypergrid of Random Forest's hyperparameters, 
 # the objective of this grid search is to find the best parameters for our model.
 # This will slightly increase the accuracy on the training set, as well as on
-# the testing set.
-# It takes some time, as it need to fir a RF model multiple times for each
-# unique combination of parameters.
+# the testing set, the optimal solution will also be selected, to reduce
+# the so common problem of overfitting that RF model's suffer from.
+# It takes some time, as it need to fit a RF model multiple times for each
+# unique combination of parameters, 40500 times for the current grid
 
 library(dplyr)
 library(randomForest)
@@ -26,9 +27,10 @@ hyper_grid <- expand.grid(
      accTe = 0
 )
 
-hyper_grid <- read.csv('5.Tuning/rfGrid.csv')
+hyper_grid <- read.csv('Data/Processed/rfGrid.csv')
 N <- nrow(hyper_grid)
 checkpoint = row.names(hyper_grid[hyper_grid$accTa == 0,])[1]
+writeLines(paste('Starting from checkpoing', checkpoint, '...'))
 for(i in checkpoint:N){
      set.seed(200)
      model <- randomForest(Clas ~ ., data = training, ntree = hyper_grid$ntree[i],
@@ -48,13 +50,4 @@ for(i in checkpoint:N){
           print(paste((i/N)*(100), '%'))
      }
 }
-write.csv(hyper_grid, '5.Tuning/rfGrid.csv', row.names = FALSE)
-
-# plot
-hyper_grid <- hyper_grid[hyper_grid$accTa != 0,]
-hyper_order <- hyper_grid[order(hyper_grid$accTa),]
-hyper_order[,'accProm'] <- hyper_order$accTe / hyper_order$accTa
-
-plot(hyper_order$accTa, col = 'red', ylab = 'Accuracy')
-points(hyper_order$accTe, col = 'blue')
-points(hyper_order$accProm, col = 'green')
+write.csv(hyper_grid, 'Data/Processed/rfGrid.csv', row.names = FALSE)
