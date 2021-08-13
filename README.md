@@ -52,7 +52,7 @@ Interesting insights were drawn on the final model (RF), since its a tree-based 
 The analysis revealed that high values of features from P7 and P8 channels were correlated with low levels of mental fatigue, in contrast to the C4 channel, in which high values of _Gamma_ C4 were correlated with lower levels of mental fatigue.
 
 <div align="center">
-<img src="https://github.com/milkbacon/ALAS-ML/blob/main/fig/SHAP.png" width=50% height=50%>
+<img src="https://github.com/milkbacon/ALAS-ML/blob/main/fig/SHAP.png" width=50% height=75%>
 </div>
 
 On the other hand, *FeatureMatrices_post.mat* did not had classes, and so the final model predicted the classes based on the biometric signals gathered. The results are displayed on the following plot, which represents the prevalence of fatigue classes and how the predominant class changed from _No Fatigue_ to _Moderate Fatigue_. This represents an additional validation to the model, because the data the subject passed a test which provoke him fatigue, and thus it reasonable that its mental fatigue increased due to the fact that the test provoke him an additional mental burden.

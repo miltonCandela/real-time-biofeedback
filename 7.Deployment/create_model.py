@@ -8,7 +8,8 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-import shap
+from shap import TreeExplainer, summary_plot
+import matplotlib.pyplot as plt
 
 # The same data is used to train the rf model now in python, the data is divided on the same 80:20 split and the target
 # variable is converted into a category type of data.
@@ -29,9 +30,11 @@ print(metrics.confusion_matrix(y_test, prediction))
 print(metrics.accuracy_score(y_test, prediction))
 
 # A SHapley Additive exPlanations summary plot is made, to observe the relation of the source and target variables
-shap_values = shap.TreeExplainer(rf).shap_values(X_test)[1]
-f = shap.summary_plot(shap_values, X_test)
+shap_values = TreeExplainer(rf).shap_values(X_test)[1]
+fig = plt.figure()
+summary_plot(shap_values, X_test, show=False)
+fig.savefig('fig/SHAP.png', format='png', dpi=150, bbox_inches="tight")
 
 from pickle import dump
 # The model is exported into a pickle file, useful for quick importing and to make later predictions on new data.
-dump(rf, open('model.pkl', 'wb'))
+dump(rf, open('Data/Processed/model.pkl', 'wb'))
