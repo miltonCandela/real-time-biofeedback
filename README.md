@@ -40,7 +40,7 @@ Although the scripts can be visualized via the folders, the following ordered li
 ## Results
 As a result of multiple testing, the final models’ average correct classification percentage, on a balanced dataset using Up-Sampling and a 5-fold stratified cross-validation (CV), was the following: Random Forest (RF) was superior (90.93%), followed by radial-kernel Support Vector Machine (SVM) (79.56%) and Generalized Boosted Modeling (GBM) (76.74%), lastly, Recursive Partitioning and Regression Trees (RPART) (54.11%) and Linear Discriminant Analysis (LDA) (52.25%).
 
-The final model was fitted using both *FeatureMatrices.mat* and *FeatureMtrices_pre.mat* into a filtered dataset, in order to remove outliers, a hard-coded filter of threshold 10 was implemented, in so that all the values trained by the model resided into -10 and +10. That prospective was taken due to the fact that the data was already standardized using its mean, and so values that were that big are due to an error from the biometric device, and so it is inappropriate to train the model using that noisy data.
+The final model was fitted using both *FeatureMatrices.mat* and *FeatureMatrices_pre.mat* into a filtered dataset, in order to remove outliers, a hard-coded filter of threshold 10 was implemented, in so that all the values trained by the model resided into -10 and +10. That prospective was taken due to the fact that the data was already standardized using its mean, and so values that were that big are due to an error from the biometric device, and so it is inappropriate to train the model using that noisy data.
 
 <div align="center">
 <img src="https://github.com/milkbacon/ALAS-ML/blob/main/fig/confusionMatrix.png" width=50% height=50%>
@@ -49,7 +49,7 @@ The final model was fitted using both *FeatureMatrices.mat* and *FeatureMtrices_
 ## Insights
 Interesting insights were drawn on the final model (RF), since its a tree-based model, its hard to draw explanations or insights about the data it was used and how it accurately predicted the 3-class fatigue level. Although, there are some methods that compute the contribution of each feature to the final prediction, the one used is called SHapley Additive exPlanations (SHAP), more specifically, _TreeSHAP_ for tree-based models.
 
-The analysis revealed that high values of features from P7 and P8 channels were correlated with low levels of mental fatigue, in contrast to the C4 channel, in which high values of _Gamma_ C4 were correlated with lower levels of mental fatigue.
+The following SHAP summary plot has the top features on the y-axis, the normalized value of that feature on the x-axis, while the color with the color bar on the right indicates the level of fatigue (1 is No Fatigue and 3 is Extreme Fatigue). The analysis revealed that high values of features from P7 and P8 channels were correlated with low levels of mental fatigue, in contrast to the C4 channel, in which high values of _Beta_ and _Theta_ C4 were correlated with higher levels of mental fatigue. Moreover, the two ratios (d/g_P8, d.g/O2) and _Beta_ P7 are inversely correlated with the target variable, as low values are predominantly _Extreme Fatigue_, while high values are predominantly _No Fatigue_.
 
 <div align="center">
 <img src="https://github.com/milkbacon/ALAS-ML/blob/main/fig/SHAP.png" width=50% height=75%>
