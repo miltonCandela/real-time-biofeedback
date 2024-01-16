@@ -67,3 +67,17 @@ The limitations of this model correspond to the ones presented on the data, such
 - There were few subjects and all of them lived in Mexico, thus, low generalization power on predicting FAS score with any other subject.
 - Multiple dataset splits were used (70:30 at most) between the training and testing dataset, however, no validation dataset was created.
 - The model used was RF, and so it usually overfitts on the training data, although there were 6% of difference between training set accuracy and testing set accuracy (0.98 and 0.92 respectively).
+
+## Citation
+If you find anything in the paper or repository useful, please consider citing:
+```
+@inproceedings{CandelaLeal2021,
+  url = {http://ieomsociety.org/proceedings/2021monterrey/487.pdf},
+  year = {2021},
+  month = nov,
+  publisher = {{IEOM}},
+  author = {Ricardo A Morales-Menendez and Mauricio A Ramírez-Moreno and Jorge de J Lozoya-Santos},
+  title = {Real-time Biofeedback System for Interactive Learning using Wearables and IoT},
+  booktitle = {2021 International Conference on Industrial Engineering and Operations Management ({IEOM})}
+}
+```
